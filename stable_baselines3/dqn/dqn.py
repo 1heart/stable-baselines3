@@ -86,6 +86,8 @@ class DQN(OffPolicyAlgorithm):
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
+        soft_q=False,
+        temperature=1.0,
     ):
 
         super(DQN, self).__init__(
@@ -127,6 +129,9 @@ class DQN(OffPolicyAlgorithm):
         # Linear schedule will be defined in `_setup_model()`
         self.exploration_schedule = None
         self.q_net, self.q_net_target = None, None
+
+        self.soft_q = soft_q
+        self.temperature = temperature
 
         if _init_setup_model:
             self._setup_model()
@@ -182,10 +187,13 @@ class DQN(OffPolicyAlgorithm):
             with th.no_grad():
                 # Compute the next Q-values using the target network
                 next_q_values = self.q_net_target(replay_data.next_observations)
-                # Follow greedy policy: use the one with the highest value
-                next_q_values, _ = next_q_values.max(dim=1)
-                # Avoid potential broadcast issue
-                next_q_values = next_q_values.reshape(-1, 1)
+                if not self.soft_q:
+                    # Follow greedy policy: use the one with the highest value
+                    next_q_values, _ = next_q_values.max(dim=1)
+                    # Avoid potential broadcast issue
+                    next_q_values = next_q_values.reshape(-1, 1)
+                else:
+                    next_q_values = th.log((next_q_values / self.temperature).exp().sum(dim=1)).reshape(-1, 1)
                 # 1-step TD target
                 target_q_values = replay_data.rewards + (1 - replay_data.dones) * self.gamma * next_q_values
 

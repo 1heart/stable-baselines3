@@ -75,7 +75,7 @@ setup(
     install_requires=[
         "gym>=0.17,<0.20",  # gym 0.20 breaks atari-py behavior
         "numpy",
-        "torch>=1.8.1",
+        "torch>=1.6.0",
         # For saving models
         "cloudpickle",
         # For reading logs
